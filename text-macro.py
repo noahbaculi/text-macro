@@ -59,6 +59,7 @@ class MainFrame(wx.Frame):
         self.macros = macros
         self.monitor_thread = MonitorThread(self, macros)
         self.macro_being_executed = False
+        self.keyboard_controller = keyboard.Controller()
 
         self.workflow_panel = wx.Panel(self)
 
@@ -111,14 +112,24 @@ class MainFrame(wx.Frame):
             output = self.macros[trigger]
             variable_names = variable_names_in(output)
 
-            if variable_names:  # dynamic macro
+            if variable_names:  # dynamic macro, do not output text
                 var_dlg = VariablesDialog(self, variable_names)
                 var_dlg.ShowModal()
 
                 for variable in var_dlg.variables.items():
                     output = output.replace(f'{{{{~{variable[0]}~}}}}', variable[1])
 
-            print(output)
+            else:  # static macro, delete trigger and output text
+                trigger_output_keys = trigger
+                for key_no_output in ['pause', 'enter', 'tab', 'home', 'page_up', 'page_down']:
+                    trigger_output_keys = trigger_output_keys.replace('pause', '')
+                for ii in range(len(trigger_output_keys)):
+                    self.keyboard_controller.press(keyboard.Key.backspace)
+                    self.keyboard_controller.release(keyboard.Key.backspace)
+                    
+                self.keyboard_controller.type(output)
+
+            # print(output)
             pyperclip.copy(output)
 
         self.macro_being_executed = False
@@ -141,9 +152,6 @@ class MonitorThread(threading.Thread):
                     Process keystroke press or release for keyboard listener for ListenerThread instances.
 
                     key: parameter passed by pynput listener identifying the key
-                    key_pressed: parameter passed to determine if key pressed or released
-                        True: key is pressed
-                        False: key is released
                     """
 
                     # replace numberpad virtual keycodes with strings of the number digits
@@ -306,9 +314,48 @@ if __name__ == '__main__':
     # Add macros here in a list of lists with {{~VAR~}} formatting for any dynamic variables.
     # Limit macro triggers to less than 20 alphanumeric characters and avoid modifier keys or words
     macros = {
-        'intropause': 'Hello, my name is Noah. This is a test. Your name is {{~First Name~}} {{~Last Name~}}.',
+'intropause':
+'''Hi {{~First Name~}},
 
-        'hitab': 'Hello hello hello.'
+My name is Noah and I'll be taking care of you today. I understand that {{~Issue~}} on Org ID: {{~Org ID~}}. I'm happy to review this with you.
+\n\n\n\n
+If you have any other questions, please let me know via email or case comment and I will respond back within 8 business hours of your reply. If I do not hear from you, I will reach out to you tomorrow before 5:00 pm {{~Timezone~}}.
+
+Thank you for your time!
+
+Noah Baculi
+Support Engineer (Tier 2)
+Salesforce Technical Support
+Global Customer Success Centers
+Hours: 8:00 AM – 5:00 PM PT''',
+
+
+
+
+'sigpause':
+'''Noah Baculi
+Support Engineer (Tier 2)
+Salesforce Technical Support
+Global Customer Success Centers
+Hours: 8:00 AM – 5:00 PM PT''',
+
+
+
+
+'closepause':
+'''Rest assured, if you do find you need further assistance you can reopen this case within 10 days.
+
+For any questions or concerns, please do not hesitate to reach out by logging a case via the Help and Training portal and we will be glad to assist you.
+
+Enjoy the rest of your day!
+
+Thank you,
+
+Noah Baculi
+Support Engineer Tier 2
+Salesforce Technical Support
+Global Customer Success Centers
+Hours: 8:00 AM – 5:00 PM PT'''
     }
 
     app = App(macros)
