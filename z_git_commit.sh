@@ -10,7 +10,7 @@ if [[ $continue_input == *"n"* ]]; then
 else
 	echo "Committing all to main..."
 	read -p "Git commit message: " commit_msg_input
-	source venv/bin/activate
+	source venv/Scripts/activate
 	pip freeze > requirements.txt
 	git add .
 	git commit -m "$commit_msg_input"
